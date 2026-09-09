@@ -5,8 +5,13 @@ Seu mouse dá **duplo clique sozinho** quando você clica uma vez? Arrasta um ar
 - Sem instalar nada além do Python (que a maioria já tem). 90 linhas, dá pra ler tudo.
 - Funciona no botão esquerdo e no direito.
 - Duplo clique de verdade continua funcionando (limite padrão de 60 ms; uma pessoa leva 100 ms ou mais entre dois cliques).
-- Roda escondido, gasta nada, e sobe sozinho com o Windows.
+- Abre uma janelinha com o estado (**ATIVO** em verde, **DESLIGADO** em vermelho), botão de ligar/desligar, contador de cliques descartados e o limite em ms. Desligado = o hook é removido de verdade, nada fica interceptando o mouse.
+- Gasta nada e sobe sozinho com o Windows.
 - Só Windows.
+
+## Jogos e anticheat
+
+Valorant e LoL leem o mouse por Raw Input, então o programa **não age dentro deles** de qualquer jeito. O Vanguard bloqueia automação de input; isso aqui não injeta clique nenhum, só descarta, mas a Riot não publica o que considera suspeito. Pra não arriscar, clique em **Desligar** antes de abrir jogo com anticheat (Vanguard, BattlEye, EAC) e em **Ligar** depois. Desligado, o hook não existe.
 
 ## Instalar
 
