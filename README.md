@@ -4,6 +4,8 @@ Seu mouse dá **duplo clique sozinho** quando você clica uma vez? Arrasta um ar
 
 - Sem instalar nada além do Python (que a maioria já tem). 90 linhas, dá pra ler tudo.
 - Funciona no botão esquerdo e no direito.
+- **Rodinha que "clica" sozinha ao rolar** (suja, ou desalinhada depois de um acidente): clique do meio que chega até 250 ms depois de um giro da rodinha é descartado. Clique do meio normal, com a rodinha parada, passa.
+- Se o software do seu mouse tem ajuste de **debounce** (Glorious Core, Razer Synapse, Pulsar, Endgame Gear), use ele primeiro. Isso aqui é pra quem não tem, como Logitech G HUB ou mouse genérico. A opção "velocidade do clique duplo" do Windows não resolve: ela só muda como o Windows interpreta dois cliques, o clique fantasma continua chegando.
 - Duplo clique de verdade continua funcionando (limite padrão de 60 ms; uma pessoa leva 100 ms ou mais entre dois cliques).
 - Abre uma janelinha com o estado (**ATIVO** em verde, **DESLIGADO** em vermelho), botão de ligar/desligar, contador de cliques descartados e o limite em ms. Desligado = o hook é removido de verdade, nada fica interceptando o mouse.
 - Gasta nada e sobe sozinho com o Windows.

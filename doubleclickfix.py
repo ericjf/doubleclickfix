@@ -8,6 +8,9 @@ o "bounce" de um switch gasto fica abaixo de 40 ms.
 Abre uma janelinha com o estado (ATIVO / DESLIGADO), botão de ligar/desligar,
 contador de cliques descartados e o limite em ms. Desligado = hook removido, nada interceptando.
 
+Também descarta clique do BOTÃO DO MEIO que chegue até WHEEL_GUARD_MS depois de um giro da
+rodinha (rodinha suja ou desalinhada que "clica" sozinha ao rolar).
+
 Uso:  pythonw doubleclickfix.py [limite_em_ms] [--desligado]
 Log:  doubleclickfix.log ao lado do script (só a contagem de cliques descartados).
 Sem dependências além do Python padrão. Só Windows.
@@ -18,7 +21,9 @@ import tkinter as tk
 args = [a for a in sys.argv[1:] if not a.startswith('--')]
 THRESHOLD_MS = float(args[0]) if args else 60.0
 START_OFF = '--desligado' in sys.argv
-BUTTONS = {0x0201: ('L', 'down'), 0x0202: ('L', 'up'), 0x0204: ('R', 'down'), 0x0205: ('R', 'up')}
+BUTTONS = {0x0201: ('L', 'down'), 0x0202: ('L', 'up'), 0x0204: ('R', 'down'), 0x0205: ('R', 'up'), 0x0207: ('M', 'down'), 0x0208: ('M', 'up')}
+WM_MOUSEWHEEL = 0x020A
+WHEEL_GUARD_MS = 250.0  # clique do meio ate este tempo depois de rolar a rodinha e descartado
 LLMHF_INJECTED = 0x01
 WH_MOUSE_LL = 14
 LOG = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'doubleclickfix.log')
@@ -41,9 +46,10 @@ user32.CallNextHookEx.argtypes = [w.HHOOK, ctypes.c_int, w.WPARAM, w.LPARAM]
 kernel32.GetModuleHandleW.restype = w.HMODULE
 kernel32.GetModuleHandleW.argtypes = [w.LPCWSTR]
 
-last_up = {'L': 0.0, 'R': 0.0}
-suppress_until_up = {'L': False, 'R': False}
-dropped = {'L': 0, 'R': 0}
+last_up = {'L': 0.0, 'R': 0.0, 'M': 0.0}
+suppress_until_up = {'L': False, 'R': False, 'M': False}
+dropped = {'L': 0, 'R': 0, 'M': 0}
+last_wheel = 0.0
 hook_handle = None
 
 
@@ -57,13 +63,16 @@ def log(msg):
 
 @LowLevelMouseProc
 def hook(nCode, wParam, lParam):
-    if nCode >= 0 and wParam in BUTTONS:
+    global last_wheel
+    if nCode >= 0 and wParam == WM_MOUSEWHEEL:
+        last_wheel = time.perf_counter() * 1000
+    elif nCode >= 0 and wParam in BUTTONS:
         info = ctypes.cast(lParam, ctypes.POINTER(MSLLHOOKSTRUCT)).contents
         if not (info.flags & LLMHF_INJECTED):  # cliques gerados por software passam direto
             btn, kind = BUTTONS[wParam]
             now = time.perf_counter() * 1000
             if kind == 'down':
-                if now - last_up[btn] < THRESHOLD_MS:
+                if now - last_up[btn] < THRESHOLD_MS or (btn == 'M' and now - last_wheel < WHEEL_GUARD_MS):
                     suppress_until_up[btn] = True
                     dropped[btn] += 1
                     if dropped[btn] % 10 == 1:
@@ -94,7 +103,7 @@ def disable():
     if hook_handle:
         user32.UnhookWindowsHookEx(hook_handle)
         hook_handle = None
-        suppress_until_up['L'] = suppress_until_up['R'] = False
+        for k in suppress_until_up: suppress_until_up[k] = False
         log('desligado')
 
 
@@ -146,7 +155,7 @@ class Janela:
         self.botao.config(text='Desligar' if on else 'Ligar')
 
     def tick(self):
-        self.contador.config(text=f"descartados: esquerdo {dropped['L']} · direito {dropped['R']}")
+        self.contador.config(text=f"descartados: esq {dropped['L']} · dir {dropped['R']} · meio/rodinha {dropped['M']}")
         self.root.after(500, self.tick)
 
     def fechar(self):
