@@ -11,11 +11,14 @@ contador de cliques descartados e o limite em ms. Desligado = hook removido, nad
 Também descarta clique do BOTÃO DO MEIO que chegue até WHEEL_GUARD_MS depois de um giro da
 rodinha (rodinha suja ou desalinhada que "clica" sozinha ao rolar).
 
+Na janelinha da pra escolher quais botoes filtrar (esquerdo, direito, rodinha) e os limites;
+as escolhas ficam salvas em doubleclickfix.json ao lado do script.
+
 Uso:  pythonw doubleclickfix.py [limite_em_ms] [--desligado]
 Log:  doubleclickfix.log ao lado do script (só a contagem de cliques descartados).
 Sem dependências além do Python padrão. Só Windows.
 """
-import ctypes, ctypes.wintypes as w, os, sys, time
+import ctypes, ctypes.wintypes as w, json, os, sys, time
 import tkinter as tk
 
 args = [a for a in sys.argv[1:] if not a.startswith('--')]
@@ -27,6 +30,25 @@ WHEEL_GUARD_MS = 250.0  # clique do meio ate este tempo depois de rolar a rodinh
 LLMHF_INJECTED = 0x01
 WH_MOUSE_LL = 14
 LOG = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'doubleclickfix.log')
+CFG = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'doubleclickfix.json')
+
+# configuracao (salva em doubleclickfix.json ao lado do script)
+cfg = {'limite_ms': THRESHOLD_MS, 'rodinha_ms': WHEEL_GUARD_MS, 'esquerdo': True, 'direito': True, 'meio': True}
+try:
+    cfg.update(json.load(open(CFG, encoding='utf-8')))
+except (OSError, ValueError):
+    pass
+if args: cfg['limite_ms'] = THRESHOLD_MS
+THRESHOLD_MS = float(cfg['limite_ms']); WHEEL_GUARD_MS = float(cfg['rodinha_ms'])
+ENABLED = {'L': bool(cfg['esquerdo']), 'R': bool(cfg['direito']), 'M': bool(cfg['meio'])}
+
+
+def salvar_cfg():
+    try:
+        json.dump({'limite_ms': THRESHOLD_MS, 'rodinha_ms': WHEEL_GUARD_MS, 'esquerdo': ENABLED['L'], 'direito': ENABLED['R'], 'meio': ENABLED['M']},
+                  open(CFG, 'w', encoding='utf-8'), indent=1)
+    except OSError:
+        pass
 
 user32 = ctypes.WinDLL('user32', use_last_error=True)
 kernel32 = ctypes.WinDLL('kernel32', use_last_error=True)
@@ -71,6 +93,9 @@ def hook(nCode, wParam, lParam):
         if not (info.flags & LLMHF_INJECTED):  # cliques gerados por software passam direto
             btn, kind = BUTTONS[wParam]
             now = time.perf_counter() * 1000
+            if not ENABLED[btn]:
+                if kind == 'up': last_up[btn] = now
+                return user32.CallNextHookEx(None, nCode, wParam, lParam)
             if kind == 'down':
                 if now - last_up[btn] < THRESHOLD_MS or (btn == 'M' and now - last_wheel < WHEEL_GUARD_MS):
                     suppress_until_up[btn] = True
@@ -124,14 +149,27 @@ class Janela:
         self.botao.grid(row=1, column=0, columnspan=2, pady=(8, 6))
         self.contador = tk.Label(f, text='', font=('Segoe UI', 9), fg='#555')
         self.contador.grid(row=2, column=0, columnspan=2)
-        tk.Label(f, text='limite (ms):', font=('Segoe UI', 9)).grid(row=3, column=0, sticky='e', pady=(6, 0))
-        self.limite = tk.Spinbox(f, from_=20, to=200, increment=10, width=5, command=self.mudar_limite)
+        opts = tk.LabelFrame(f, text='o que filtrar', font=('Segoe UI', 8), padx=8, pady=4)
+        opts.grid(row=3, column=0, columnspan=2, sticky='ew', pady=(8, 4))
+        self.vars = {}
+        for i, (k, nome) in enumerate([('L', 'botão esquerdo'), ('R', 'botão direito'), ('M', 'rodinha (botão do meio)')]):
+            v = tk.BooleanVar(value=ENABLED[k]); self.vars[k] = v
+            tk.Checkbutton(opts, text=nome, variable=v, font=('Segoe UI', 9), anchor='w',
+                           command=lambda k=k, v=v: self.mudar_botao(k, v)).grid(row=i, column=0, sticky='w')
+        lim = tk.Frame(f); lim.grid(row=4, column=0, columnspan=2, pady=(4, 0))
+        tk.Label(lim, text='duplo clique (ms):', font=('Segoe UI', 9)).grid(row=0, column=0, sticky='e')
+        self.limite = tk.Spinbox(lim, from_=20, to=200, increment=10, width=5, command=self.mudar_limite)
         self.limite.delete(0, 'end'); self.limite.insert(0, f'{THRESHOLD_MS:g}')
-        self.limite.bind('<Return>', lambda e: self.mudar_limite())
-        self.limite.grid(row=3, column=1, sticky='w', pady=(6, 0))
+        self.limite.bind('<Return>', lambda e: self.mudar_limite()); self.limite.bind('<FocusOut>', lambda e: self.mudar_limite())
+        self.limite.grid(row=0, column=1, sticky='w', padx=(4, 0))
+        tk.Label(lim, text='rodinha (ms):', font=('Segoe UI', 9)).grid(row=1, column=0, sticky='e', pady=(3, 0))
+        self.rod = tk.Spinbox(lim, from_=50, to=1000, increment=50, width=5, command=self.mudar_rodinha)
+        self.rod.delete(0, 'end'); self.rod.insert(0, f'{WHEEL_GUARD_MS:g}')
+        self.rod.bind('<Return>', lambda e: self.mudar_rodinha()); self.rod.bind('<FocusOut>', lambda e: self.mudar_rodinha())
+        self.rod.grid(row=1, column=1, sticky='w', padx=(4, 0), pady=(3, 0))
         self.topo = tk.BooleanVar(value=True)
         tk.Checkbutton(f, text='sempre visível', variable=self.topo, font=('Segoe UI', 8),
-                       command=lambda: self.root.attributes('-topmost', self.topo.get())).grid(row=4, column=0, columnspan=2, pady=(4, 0))
+                       command=lambda: self.root.attributes('-topmost', self.topo.get())).grid(row=5, column=0, columnspan=2, pady=(6, 0))
         self.atualizar()
         self.tick()
 
@@ -145,9 +183,19 @@ class Janela:
     def mudar_limite(self):
         global THRESHOLD_MS
         try:
-            THRESHOLD_MS = float(self.limite.get())
+            THRESHOLD_MS = float(self.limite.get()); salvar_cfg()
         except ValueError:
             pass
+
+    def mudar_rodinha(self):
+        global WHEEL_GUARD_MS
+        try:
+            WHEEL_GUARD_MS = float(self.rod.get()); salvar_cfg()
+        except ValueError:
+            pass
+
+    def mudar_botao(self, k, v):
+        ENABLED[k] = bool(v.get()); salvar_cfg()
 
     def atualizar(self):
         on = bool(hook_handle)

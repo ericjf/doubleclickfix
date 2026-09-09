@@ -7,7 +7,7 @@ Seu mouse dá **duplo clique sozinho** quando você clica uma vez? Arrasta um ar
 - **Rodinha que "clica" sozinha ao rolar** (suja, ou desalinhada depois de um acidente): clique do meio que chega até 250 ms depois de um giro da rodinha é descartado. Clique do meio normal, com a rodinha parada, passa.
 - Se o software do seu mouse tem ajuste de **debounce** (Glorious Core, Razer Synapse, Pulsar, Endgame Gear), use ele primeiro. Isso aqui é pra quem não tem, como Logitech G HUB ou mouse genérico. A opção "velocidade do clique duplo" do Windows não resolve: ela só muda como o Windows interpreta dois cliques, o clique fantasma continua chegando.
 - Duplo clique de verdade continua funcionando (limite padrão de 60 ms; uma pessoa leva 100 ms ou mais entre dois cliques).
-- Abre uma janelinha com o estado (**ATIVO** em verde, **DESLIGADO** em vermelho), botão de ligar/desligar, contador de cliques descartados e o limite em ms. Desligado = o hook é removido de verdade, nada fica interceptando o mouse.
+- Abre uma janelinha com o estado (**ATIVO** em verde, **DESLIGADO** em vermelho), botão de ligar/desligar, contador de cliques descartados, **caixinhas pra escolher o que filtrar** (só o esquerdo, só o direito, só a rodinha, ou qualquer combinação) e os dois limites em ms (duplo clique e rodinha). As escolhas ficam salvas e voltam quando o programa reabre. Desligado = o hook é removido de verdade, nada fica interceptando o mouse.
 - Gasta nada e sobe sozinho com o Windows.
 - Só Windows.
 
@@ -25,7 +25,7 @@ Pronto. Ele já está rodando e vai abrir sozinho a cada login.
 
 ## Testar
 
-Clique várias vezes com o botão que estava ruim. Se ainda escapar algum duplo clique, abra o `doubleclickfix.log` na pasta: cada linha "clique fantasma descartado" é um clique que ele segurou. Se quiser um limite maior (mais agressivo), edite o `doubleclickfix.cmd` que ficou na pasta de inicialização e acrescente o número no fim, por exemplo `... doubleclickfix.py" 90` para 90 ms. Se um duplo clique legítimo parar de funcionar, diminua (40).
+Clique várias vezes com o botão que estava ruim. Se ainda escapar algum duplo clique, abra o `doubleclickfix.log` na pasta: cada linha "clique fantasma descartado" é um clique que ele segurou. Se quiser um limite maior (mais agressivo), mude o "duplo clique (ms)" na janelinha (90, por exemplo). Se um duplo clique legítimo parar de funcionar, diminua (40). Mouse que só tem problema na rodinha: desmarca esquerdo e direito e deixa só a rodinha marcada.
 
 Pasta de inicialização: `Win + R`, digite `shell:startup`, Enter.
 
