@@ -11,7 +11,7 @@ Seu mouse dá **duplo clique sozinho** quando você clica uma vez? Arrasta um ar
 ## Instalar
 
 1. Tenha o Python 3 instalado: https://www.python.org/downloads/ (marque **"Add python.exe to PATH"** na instalação).
-2. Baixe este repositório (botão verde **Code > Download ZIP**) e extraia numa pasta que você não vá apagar (ex.: `C:\doubleclickfix`).
+2. Baixe este repositório (botão verde **Code > Download ZIP**) e extraia numa pasta que você não vá apagar nem mover (ex.: `C:\doubleclickfix`). O atalho de inicialização aponta pra esse caminho; se mover a pasta, rode o `instalar.cmd` de novo.
 3. Dê dois cliques em **`instalar.cmd`**.
 
 Pronto. Ele já está rodando e vai abrir sozinho a cada login.

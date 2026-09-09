@@ -23,7 +23,7 @@ kernel32 = ctypes.WinDLL('kernel32', use_last_error=True)
 
 class MSLLHOOKSTRUCT(ctypes.Structure):
     _fields_ = [('pt', w.POINT), ('mouseData', w.DWORD), ('flags', w.DWORD), ('time', w.DWORD),
-                ('dwExtraInfo', ctypes.POINTER(ctypes.c_ulong))]
+                ('dwExtraInfo', ctypes.c_size_t)]  # ULONG_PTR
 
 
 LowLevelMouseProc = ctypes.CFUNCTYPE(ctypes.c_long, ctypes.c_int, w.WPARAM, w.LPARAM)

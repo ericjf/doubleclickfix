@@ -3,10 +3,11 @@ setlocal
 rem Instala o doubleclickfix para iniciar junto com o Windows (so para o seu usuario, sem admin).
 set "DIR=%~dp0"
 set "PYW="
-for /f "delims=" %%p in ('where pythonw.exe 2^>nul') do if not defined PYW set "PYW=%%p"
-if not defined PYW (
-  for /f "delims=" %%p in ('py -3 -c "import sys,os;print(os.path.join(os.path.dirname(sys.executable),'pythonw.exe'))" 2^>nul') do set "PYW=%%p"
-)
+rem 1) launcher oficial do Python (ignora venvs que estejam no PATH)
+for /f "delims=" %%p in ('py -3 -c "import sys,os;print(os.path.join(os.path.dirname(sys.executable),'pythonw.exe'))" 2^>nul') do if not defined PYW set "PYW=%%p"
+if defined PYW if not exist "%PYW%" set "PYW="
+rem 2) fallback: qualquer pythonw.exe no PATH
+if not defined PYW for /f "delims=" %%p in ('where pythonw.exe 2^>nul') do if not defined PYW set "PYW=%%p"
 if not defined PYW (
   echo Python 3 nao encontrado. Instale em https://www.python.org/downloads/ marcando "Add python.exe to PATH" e rode de novo.
   pause & exit /b 1
