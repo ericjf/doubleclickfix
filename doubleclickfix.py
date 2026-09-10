@@ -29,8 +29,33 @@ WM_MOUSEWHEEL = 0x020A
 WHEEL_GUARD_MS = 250.0  # clique do meio ate este tempo depois de rolar a rodinha e descartado
 LLMHF_INJECTED = 0x01
 WH_MOUSE_LL = 14
-LOG = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'doubleclickfix.log')
-CFG = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'doubleclickfix.json')
+FROZEN = getattr(sys, 'frozen', False)  # rodando como .exe do PyInstaller
+BASE = os.path.dirname(os.path.abspath(sys.executable if FROZEN else __file__))
+LOG = os.path.join(BASE, 'doubleclickfix.log')
+CFG = os.path.join(BASE, 'doubleclickfix.json')
+STARTUP_CMD = os.path.join(os.environ.get('APPDATA', ''), 'Microsoft', 'Windows', 'Start Menu', 'Programs', 'Startup', 'doubleclickfix.cmd')
+
+
+def comando_inicio():
+    if FROZEN:
+        return f'@start "" "{sys.executable}"'
+    pyw = os.path.join(os.path.dirname(sys.executable), 'pythonw.exe')
+    return f'@start "" "{pyw}" "{os.path.abspath(__file__)}"'
+
+
+def inicio_ativo():
+    return os.path.exists(STARTUP_CMD)
+
+
+def definir_inicio(ligar):
+    try:
+        if ligar:
+            with open(STARTUP_CMD, 'w', encoding='ascii', errors='ignore') as f:
+                f.write(comando_inicio() + '\n')
+        elif os.path.exists(STARTUP_CMD):
+            os.remove(STARTUP_CMD)
+    except OSError as e:
+        log(f'falha ao mexer na inicializacao: {e}')
 
 # configuracao (salva em doubleclickfix.json ao lado do script)
 cfg = {'limite_ms': THRESHOLD_MS, 'rodinha_ms': WHEEL_GUARD_MS, 'esquerdo': True, 'direito': True, 'meio': True}
@@ -167,9 +192,12 @@ class Janela:
         self.rod.delete(0, 'end'); self.rod.insert(0, f'{WHEEL_GUARD_MS:g}')
         self.rod.bind('<Return>', lambda e: self.mudar_rodinha()); self.rod.bind('<FocusOut>', lambda e: self.mudar_rodinha())
         self.rod.grid(row=1, column=1, sticky='w', padx=(4, 0), pady=(3, 0))
+        self.inicio = tk.BooleanVar(value=inicio_ativo())
+        tk.Checkbutton(f, text='abrir junto com o Windows', variable=self.inicio, font=('Segoe UI', 8),
+                       command=lambda: definir_inicio(self.inicio.get())).grid(row=5, column=0, columnspan=2, pady=(6, 0))
         self.topo = tk.BooleanVar(value=True)
         tk.Checkbutton(f, text='sempre visível', variable=self.topo, font=('Segoe UI', 8),
-                       command=lambda: self.root.attributes('-topmost', self.topo.get())).grid(row=5, column=0, columnspan=2, pady=(6, 0))
+                       command=lambda: self.root.attributes('-topmost', self.topo.get())).grid(row=6, column=0, columnspan=2)
         self.atualizar()
         self.tick()
 
