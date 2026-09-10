@@ -58,7 +58,7 @@ def definir_inicio(ligar):
         log(f'falha ao mexer na inicializacao: {e}')
 
 # configuracao (salva em doubleclickfix.json ao lado do script)
-cfg = {'limite_ms': THRESHOLD_MS, 'rodinha_ms': WHEEL_GUARD_MS, 'esquerdo': True, 'direito': True, 'meio': True}
+cfg = {'limite_ms': THRESHOLD_MS, 'rodinha_ms': WHEEL_GUARD_MS, 'esquerdo': True, 'direito': True, 'meio': True, 'bloquear_meio': False}
 try:
     cfg.update(json.load(open(CFG, encoding='utf-8')))
 except (OSError, ValueError):
@@ -66,11 +66,12 @@ except (OSError, ValueError):
 if args: cfg['limite_ms'] = THRESHOLD_MS
 THRESHOLD_MS = float(cfg['limite_ms']); WHEEL_GUARD_MS = float(cfg['rodinha_ms'])
 ENABLED = {'L': bool(cfg['esquerdo']), 'R': bool(cfg['direito']), 'M': bool(cfg['meio'])}
+BLOCK_M = bool(cfg.get('bloquear_meio', False))  # descarta TODO clique do meio (a rolagem continua)
 
 
 def salvar_cfg():
     try:
-        json.dump({'limite_ms': THRESHOLD_MS, 'rodinha_ms': WHEEL_GUARD_MS, 'esquerdo': ENABLED['L'], 'direito': ENABLED['R'], 'meio': ENABLED['M']},
+        json.dump({'limite_ms': THRESHOLD_MS, 'rodinha_ms': WHEEL_GUARD_MS, 'esquerdo': ENABLED['L'], 'direito': ENABLED['R'], 'meio': ENABLED['M'], 'bloquear_meio': BLOCK_M},
                   open(CFG, 'w', encoding='utf-8'), indent=1)
     except OSError:
         pass
@@ -118,6 +119,10 @@ def hook(nCode, wParam, lParam):
         if not (info.flags & LLMHF_INJECTED):  # cliques gerados por software passam direto
             btn, kind = BUTTONS[wParam]
             now = time.perf_counter() * 1000
+            if btn == 'M' and BLOCK_M:
+                if kind == 'down':
+                    dropped[btn] += 1
+                return 1  # botao do meio bloqueado de vez
             if not ENABLED[btn]:
                 if kind == 'up': last_up[btn] = now
                 return user32.CallNextHookEx(None, nCode, wParam, lParam)
@@ -181,6 +186,9 @@ class Janela:
             v = tk.BooleanVar(value=ENABLED[k]); self.vars[k] = v
             tk.Checkbutton(opts, text=nome, variable=v, font=('Segoe UI', 9), anchor='w',
                            command=lambda k=k, v=v: self.mudar_botao(k, v)).grid(row=i, column=0, sticky='w')
+        self.bloq = tk.BooleanVar(value=BLOCK_M)
+        tk.Checkbutton(opts, text='bloquear botão do meio de vez', variable=self.bloq, font=('Segoe UI', 9, 'bold'), anchor='w',
+                       command=self.mudar_bloqueio).grid(row=3, column=0, sticky='w', pady=(4, 0))
         lim = tk.Frame(f); lim.grid(row=4, column=0, columnspan=2, pady=(4, 0))
         tk.Label(lim, text='duplo clique (ms):', font=('Segoe UI', 9)).grid(row=0, column=0, sticky='e')
         self.limite = tk.Spinbox(lim, from_=20, to=200, increment=10, width=5, command=self.mudar_limite)
@@ -224,6 +232,10 @@ class Janela:
 
     def mudar_botao(self, k, v):
         ENABLED[k] = bool(v.get()); salvar_cfg()
+
+    def mudar_bloqueio(self):
+        global BLOCK_M
+        BLOCK_M = bool(self.bloq.get()); salvar_cfg()
 
     def atualizar(self):
         on = bool(hook_handle)
